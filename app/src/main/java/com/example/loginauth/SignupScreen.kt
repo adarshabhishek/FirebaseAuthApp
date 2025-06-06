@@ -1,6 +1,5 @@
 package com.example.loginauth
 
-import android.graphics.Paint.Align
 import android.widget.Toast
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -22,19 +21,21 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
-
 import androidx.navigation.NavHostController
 import com.google.firebase.Firebase
-import com.google.firebase.FirebaseApp
 import com.google.firebase.auth.auth
+import com.google.firebase.auth.FirebaseAuth
+
 
 @Composable
 fun SignupScreen(navController: NavHostController){
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
 
-    Box(modifier = Modifier.fillMaxSize().padding(16.dp), contentAlignment = Alignment.Center){
+    Box(modifier = Modifier.fillMaxSize().padding(16.dp),
+        contentAlignment = Alignment.Center){
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text("Sign Up", style = MaterialTheme.typography.headlineMedium)
             Spacer(modifier = Modifier.height(24.dp))
@@ -53,6 +54,7 @@ fun SignupScreen(navController: NavHostController){
                 onValueChange = { password = it },
                 label = { Text("Password") },
                 singleLine = true,
+                visualTransformation = PasswordVisualTransformation(),
                 modifier = Modifier.fillMaxWidth()
             )
             Spacer(modifier = Modifier.height(24.dp))
@@ -60,19 +62,18 @@ fun SignupScreen(navController: NavHostController){
             val context= LocalContext.current
 
             Button(onClick = {
-                Firebase.auth.createUserWithEmailAndPassword(email, password)
+                val auth = FirebaseAuth.getInstance()
+                auth.createUserWithEmailAndPassword(email, password)
                     .addOnCompleteListener { task ->
                         if (task.isSuccessful) {
-                            Toast.makeText(context, "Sign up successful", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, "Signup successful", Toast.LENGTH_SHORT).show()
                             navController.navigate("login") {
                                 popUpTo("signup") { inclusive = true }
                             }
                         } else {
-                            Toast.makeText(
-                                context,
+                            Toast.makeText(context,
                                 task.exception?.message ?: "Sign up failed",
-                                Toast.LENGTH_SHORT
-                            ).show()
+                                Toast.LENGTH_SHORT).show()
                         }
                     }
             }, modifier = Modifier.fillMaxWidth()){
@@ -84,9 +85,11 @@ fun SignupScreen(navController: NavHostController){
                 navController.navigate("login") {
                     popUpTo("signup") { inclusive = true }
                 }
-            }) {
+            }){
                 Text("Already have an account? Login")
             }
         }
     }
+
+
 }
