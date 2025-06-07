@@ -1,8 +1,8 @@
 package com.example.loginauth
 
-
-import android.app.AlertDialog
 import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -26,15 +26,61 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.navigation.NavHostController
+import com.google.android.gms.auth.api.signin.GoogleSignIn
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions
+import com.google.android.gms.common.SignInButton
 import com.google.firebase.Firebase
+import com.google.firebase.auth.GoogleAuthProvider
 import com.google.firebase.auth.auth
+
 
 @Composable
 fun LoginScreen(navController: NavHostController){
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var forgotPassword by remember { mutableStateOf(false) }
+
+    val context = LocalContext.current
+    val clientId =BuildConfig.webClientId
+
+
+    val googleSignInOptions = remember {
+        GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+            .requestIdToken(clientId)
+            .requestEmail()
+            .build()
+    }
+
+    val googleSignInClient = remember {
+        GoogleSignIn.getClient(context, googleSignInOptions)
+    }
+
+    val launcher = rememberLauncherForActivityResult(
+        contract=ActivityResultContracts.StartActivityForResult()
+    ) { result->
+        val task=GoogleSignIn.getSignedInAccountFromIntent(result.data)
+        try {
+            val account = task.result
+            val credential = GoogleAuthProvider.getCredential(account.idToken, null)
+            Firebase.auth.signInWithCredential(credential)
+                .addOnCompleteListener { task ->
+                    if (task.isSuccessful) {
+                        Toast.makeText(context, "Google Sign-In successful", Toast.LENGTH_SHORT)
+                            .show()
+                        navController.navigate("home") {
+                            popUpTo("login") { inclusive = true }
+                        }
+                    } else {
+                        Toast.makeText(context, "Google Sign-In failed", Toast.LENGTH_SHORT).show()
+                    }
+                }
+        }catch (e:Exception){
+            Toast.makeText(context, "Google Sign-In failed : ${e.message}", Toast.LENGTH_SHORT).show()
+        }
+    }
+
 
     Box(modifier = Modifier.fillMaxSize().padding(16.dp),
         contentAlignment = Alignment.Center){
@@ -81,6 +127,18 @@ fun LoginScreen(navController: NavHostController){
                 Text("Login")
             }
             Spacer(modifier = Modifier.height(8.dp))
+
+            AndroidView(modifier = Modifier.fillMaxWidth().height(48.dp),
+                factory = {context->
+                    SignInButton(context).apply {
+                        setSize(SignInButton.SIZE_WIDE)
+                        setOnClickListener {
+                            val signInIntent = googleSignInClient.signInIntent
+                            launcher.launch(signInIntent)
+                        }
+                    }
+                })
+
             if (forgotPassword) {
                 var resetEmail by remember { mutableStateOf("") }
                 val context = LocalContext.current
@@ -145,6 +203,4 @@ fun LoginScreen(navController: NavHostController){
             }
         }
     }
-
-
 }
